@@ -1,5 +1,7 @@
 # Email Exchange Database Creator
 
+🚀 **[Live Demo](https://kylemath.github.io/SteveMannEmails)** 🚀
+
 A client-side web application that converts email exchanges into structured JSON format suitable for LLM training and context. Now with **automatic Gmail API integration**!
 
 ## Features
