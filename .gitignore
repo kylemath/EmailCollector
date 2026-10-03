@@ -1,0 +1,24 @@
+# Gmail API Credentials - NEVER COMMIT THESE!
+config.js
+
+# If you've created a config with actual credentials, rename it to config.local.js
+# and keep config.js as the template
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+

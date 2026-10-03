@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Exchange Database Creator</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Gmail API -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📧 Email Exchange Database Creator</h1>
+            <p class="subtitle">Convert email exchanges into structured JSON for LLM training</p>
+        </header>
+
+        <main>
+            <section class="auth-section">
+                <h2>1. Configure Gmail API & Connect</h2>
+                
+                <!-- API Credentials Input -->
+                <div id="credentialsInput" class="credentials-input">
+                    <div class="credentials-status" id="credentialsStatus">
+                        <span class="status-indicator" id="statusIndicator">⚙️</span>
+                        <span id="statusText">Gmail API credentials not configured</span>
+                    </div>
+                    
+                    <div class="credentials-form" id="credentialsForm">
+                        <div class="form-group">
+                            <label for="clientIdInput">
+                                <strong>OAuth Client ID:</strong>
+                                <a href="#" id="setupInstructionsLink" class="help-link">How to get this?</a>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="clientIdInput" 
+                                placeholder="123456789-abcdefghijklmnop.apps.googleusercontent.com"
+                                class="credential-input"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="apiKeyInput">
+                                <strong>API Key (optional):</strong>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="apiKeyInput" 
+                                placeholder="AIzaSyAbc123xyz..."
+                                class="credential-input"
+                            >
+                        </div>
+                        
+                        <div class="credentials-actions">
+                            <button id="saveCredentialsBtn" class="btn btn-success">
+                                <span>💾 Save Credentials</span>
+                            </button>
+                            <button id="clearCredentialsBtn" class="btn btn-secondary" style="display: none;">
+                                <span>🗑️ Clear Saved Credentials</span>
+                            </button>
+                        </div>
+                        
+                        <div class="credentials-note">
+                            <small>
+                                🔒 Credentials are saved securely in your browser's local storage and never sent anywhere.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Authentication -->
+                <div id="authStatus" class="auth-status" style="display: none;">
+                    <div class="auth-buttons">
+                        <button id="authorizeBtn" class="btn btn-primary">
+                            <span>🔐 Connect Gmail Account</span>
+                        </button>
+                        <button id="signoutBtn" class="btn btn-secondary" style="display: none;">
+                            <span>🚪 Sign Out</span>
+                        </button>
+                    </div>
+                    <div id="userInfo" class="user-info" style="display: none;"></div>
+                </div>
+            </section>
+
+            <section class="upload-section" id="manualUploadSection">
+                <h2>2a. Or Upload Email Files Manually</h2>
+                <div class="upload-area">
+                    <input type="file" id="emailFileInput" accept=".mbox,.eml,.txt" multiple>
+                    <label for="emailFileInput" class="upload-label">
+                        <span class="upload-icon">📁</span>
+                        <span>Click to upload email files</span>
+                        <span class="file-types">Supports: .mbox, .eml, .txt</span>
+                    </label>
+                </div>
+                <div id="fileInfo" class="file-info"></div>
+            </section>
+
+            <section class="gmail-fetch-section" id="gmailFetchSection" style="display: none;">
+                <h2>2b. Fetch Emails from Gmail</h2>
+                <div class="gmail-fetch-area">
+                    <p class="info-text">Download emails directly from your Gmail account</p>
+                    <div class="fetch-controls">
+                        <div class="filter-item">
+                            <label for="gmailTargetEmail">Target Email Address:</label>
+                            <input type="email" id="gmailTargetEmail" placeholder="steve@example.com">
+                            <small>Email address to search conversations with</small>
+                        </div>
+                        <div class="filter-item">
+                            <label for="gmailMaxResults">Maximum Emails:</label>
+                            <input type="number" id="gmailMaxResults" value="500" min="10" max="5000" step="10">
+                            <small>Number of emails to fetch (max 5000)</small>
+                        </div>
+                    </div>
+                    <button id="fetchGmailBtn" class="btn btn-primary">
+                        <span>📥 Fetch Emails from Gmail</span>
+                    </button>
+                    <div id="fetchProgress" class="fetch-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <p id="progressText">Fetching emails...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="filter-section">
+                <h2>3. Configure Export Options</h2>
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label for="targetEmail">Target Email Address (Manual Upload):</label>
+                        <input type="email" id="targetEmail" placeholder="person@example.com">
+                        <small>Leave empty to include all emails</small>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="yearsBack">Years Back:</label>
+                        <input type="number" id="yearsBack" value="5" min="1" max="50">
+                        <small>How many years of history to include</small>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="includeSubject">
+                            <input type="checkbox" id="includeSubject" checked>
+                            Include Subject Lines
+                        </label>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="includeMetadata">
+                            <input type="checkbox" id="includeMetadata" checked>
+                            Include Metadata (timestamps, etc.)
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="action-section">
+                <button id="processBtn" class="btn btn-primary">
+                    <span>🔄 Process Emails</span>
+                </button>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>4. Results</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalEmails">0</div>
+                        <div class="stat-label">Total Emails</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dateRange">-</div>
+                        <div class="stat-label">Date Range</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="conversations">0</div>
+                        <div class="stat-label">Conversations</div>
+                    </div>
+                </div>
+
+                <div class="preview-area">
+                    <h3>Preview (First 5 entries)</h3>
+                    <pre id="jsonPreview"></pre>
+                </div>
+
+                <div class="export-actions">
+                    <button id="downloadJsonBtn" class="btn btn-success">
+                        <span>💾 Download JSON Database</span>
+                    </button>
+                    <button id="copyJsonBtn" class="btn btn-secondary">
+                        <span>📋 Copy to Clipboard</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="instructions-section">
+                <h2>📖 How to Use</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="gmail">Using Gmail API</button>
+                    <button class="tab-btn" data-tab="manual">Manual Upload</button>
+                </div>
+                
+                <div id="gmailTab" class="tab-content active">
+                    <ol>
+                        <li><strong>Setup API:</strong> Configure your Gmail API credentials (one-time setup)</li>
+                        <li><strong>Connect:</strong> Click "Connect Gmail Account" and authorize the app</li>
+                        <li><strong>Specify target:</strong> Enter the email address of the person you want to extract conversations with</li>
+                        <li><strong>Fetch:</strong> Click "Fetch Emails from Gmail" to automatically download your emails</li>
+                        <li><strong>Configure:</strong> Adjust export options (metadata, subjects, etc.)</li>
+                        <li><strong>Process:</strong> Click "Process Emails" to organize the data</li>
+                        <li><strong>Download:</strong> Download the generated JSON file for your LLM</li>
+                    </ol>
+                </div>
+                
+                <div id="manualTab" class="tab-content">
+                    <ol>
+                        <li><strong>Export your emails:</strong> Export conversations as .mbox or .eml files from your email client</li>
+                        <li><strong>Upload files:</strong> Click the upload area to select your email files</li>
+                        <li><strong>Configure filters:</strong> Set the time range and export options</li>
+                        <li><strong>Process:</strong> Click "Process Emails" to parse and organize the data</li>
+                        <li><strong>Download:</strong> Download the generated JSON file</li>
+                    </ol>
+                </div>
+                
+                <div class="tips">
+                    <h3>💡 Tips</h3>
+                    <ul>
+                        <li><strong>Gmail API:</strong> Automatically fetches emails without manual export - much faster!</li>
+                        <li><strong>Rate Limits:</strong> Gmail API has daily quotas - for large archives, fetch in batches</li>
+                        <li><strong>Privacy:</strong> All processing happens locally - emails are never sent to external servers</li>
+                        <li>The JSON output is optimized for LLM context windows with clear conversation threading</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>All processing happens locally in your browser. No data is sent to any server.</p>
+        </footer>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing emails...</p>
+    </div>
+
+    <!-- Setup Instructions Modal -->
+    <div id="setupModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>⚙️ Gmail API Setup Instructions</h2>
+            
+            <div class="setup-steps">
+                <h3>Step 1: Create Google Cloud Project</h3>
+                <ol>
+                    <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                    <li>Create a new project or select an existing one</li>
+                    <li>Note your project name</li>
+                </ol>
+
+                <h3>Step 2: Enable Gmail API</h3>
+                <ol>
+                    <li>In the Cloud Console, go to "APIs & Services" → "Library"</li>
+                    <li>Search for "Gmail API"</li>
+                    <li>Click "Enable"</li>
+                </ol>
+
+                <h3>Step 3: Create OAuth 2.0 Credentials</h3>
+                <ol>
+                    <li>Go to "APIs & Services" → "Credentials"</li>
+                    <li>Click "Create Credentials" → "OAuth client ID"</li>
+                    <li>If prompted, configure the OAuth consent screen:
+                        <ul>
+                            <li>User Type: External</li>
+                            <li>Add your email as a test user</li>
+                            <li>Scopes: Add "https://www.googleapis.com/auth/gmail.readonly"</li>
+                        </ul>
+                    </li>
+                    <li>Application type: "Web application"</li>
+                    <li>Authorized JavaScript origins: Add your local URL (e.g., http://localhost:8000 or file://)</li>
+                    <li>Click "Create"</li>
+                    <li>Copy your <strong>Client ID</strong></li>
+                </ol>
+
+                <h3>Step 4: Configure the App</h3>
+                <ol>
+                    <li>Open <code>config.js</code> in this directory</li>
+                    <li>Replace <code>YOUR_CLIENT_ID_HERE</code> with your actual Client ID</li>
+                    <li>Replace <code>YOUR_API_KEY_HERE</code> with your API Key (from Credentials page)</li>
+                    <li>Save the file</li>
+                </ol>
+
+                <h3>Step 5: Run a Local Server</h3>
+                <p>For security reasons, Gmail API requires HTTPS or localhost. Run a local server:</p>
+                <div class="code-block">
+                    <code>python3 -m http.server 8000</code>
+                </div>
+                <p>Then open <code>http://localhost:8000</code> in your browser</p>
+
+                <div class="warning-box">
+                    <strong>⚠️ Important:</strong>
+                    <ul>
+                        <li>Keep your credentials private - never commit config.js to public repos</li>
+                        <li>Add test users in OAuth consent screen if app is not verified</li>
+                        <li>Gmail API has daily quota limits (check Google Cloud Console)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config.js is now optional - you can enter credentials directly in the UI -->
+    <script>
+        // Fallback CONFIG object if config.js doesn't exist
+        if (typeof CONFIG === 'undefined') {
+            var CONFIG = {
+                CLIENT_ID: 'YOUR_CLIENT_ID_HERE',
+                API_KEY: 'YOUR_API_KEY_HERE'
+            };
+        }
+    </script>
+    <script src="config.js" onerror="console.log('config.js not found - using direct credential input')"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
