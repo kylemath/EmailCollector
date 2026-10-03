@@ -1,0 +1,11 @@
+{
+  "id": "EmailCollector",
+  "title": "EmailCollector",
+  "oneLiner": "Collect emails in json format'",
+  "demoUrl": "https://kylemath.github.io/EmailCollector",
+  "screenshot": "https://raw.githubusercontent.com/kylemath/EmailCollector/main/screens",
+  "kind": "project",
+  "categories": [],
+  "tags": [],
+  "status": "published"
+}
